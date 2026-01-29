@@ -196,9 +196,7 @@ async function main() {
   const app = createMcpExpressApp({ host: '127.0.0.1' });
 
   // Create StreamableHTTPServerTransport in stateful mode
-  const transport = new StreamableHTTPServerTransport({
-    sessionIdGenerator: () => randomUUID(),
-  });
+  const transport = new StreamableHTTPServerTransport();
 
   // Connect server to transport
   await mcpServer.connect(transport);
