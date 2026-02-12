@@ -1,75 +1,142 @@
 # Usage Guide: TypeScript Extractor MCP Server
 
-This guide shows you how to set up and use the TypeScript Extractor MCP server with Claude Code.
+This guide shows you how to set up and use the TypeScript Extractor MCP server.
 
 ## Quick Start
 
 ### 1. Build the Project
 
 ```bash
-cd /Users/saud/.claude/tools/context-tree
+cd /Users/saud/Projects/ai-tools/mcp-servers/context-tree
 npm install
 npm run build
 ```
 
-### 2. Configure Claude Code
+### 2. Start the Server
 
-Add this server to your Claude Code MCP configuration file:
+```bash
+npm start
+```
 
-**macOS/Linux**: `~/.config/claude/claude_desktop_config.json`
-**Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
+The server will start on port 4001 (or the port specified by the `PORT` environment variable).
 
-```json
-{
-  "mcpServers": {
-    "typescript-extractor": {
-      "command": "node",
-      "args": ["/Users/saud/.claude/tools/context-tree/build/index.js"]
+### 3. Register a Client
+
+Before using the tools, you need to register and obtain an authentication token:
+
+```bash
+curl -X POST http://localhost:4001/register \
+  -H "Content-Type: application/json" \
+  -d '{"clientId": "my-client"}'
+```
+
+Save the returned token for subsequent requests.
+
+## Server Endpoints
+
+| Endpoint | Method | Authentication | Description |
+|----------|--------|----------------|-------------|
+| `/register` | POST | None | Register a client and get a Bearer token |
+| `/mcp` | POST | Bearer token required | Call MCP tools |
+| `/mcp` | GET | Bearer token required | SSE streaming endpoint |
+
+## Authentication
+
+All MCP tool calls require authentication via a Bearer token:
+
+```bash
+curl -X POST http://localhost:4001/mcp \
+  -H "Authorization: Bearer YOUR_TOKEN_HERE" \
+  -H "Content-Type: application/json" \
+  -d '{...}'
+```
+
+Tokens are persisted to `.mcp-tokens.json` and survive server restarts.
+
+## Available Tools
+
+### 1. `list_typescript_methods`
+
+Lists all method and function names in a TypeScript file. This is useful for exploring a file's structure before extracting specific methods.
+
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `filePath` | string | Yes | Path to the TypeScript file (absolute or relative to server's working directory) |
+
+**Example Request:**
+
+```bash
+curl -X POST http://localhost:4001/mcp \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "tools/call",
+    "params": {
+      "name": "list_typescript_methods",
+      "arguments": {
+        "filePath": "test-examples/sample.ts"
+      }
     }
-  }
-}
+  }'
 ```
 
-### 3. Restart Claude Code
+**Example Response:**
 
-After updating the configuration, restart Claude Code to load the new MCP server.
-
-## Using the Tool
-
-Once configured, you can ask Claude Code to extract TypeScript methods and functions. The tool will automatically:
-- Find the method/function in the file
-- Analyze which imports it uses
-- Return both the imports and the complete method body
-
-### Example Queries
-
-**Extract a class method:**
 ```
-Can you extract the fetchUser method from test-examples/sample.ts?
+Found 7 method(s)/function(s):
+
+- calculateTotal
+- fetchUser
+- formatDate
+- formatUserName
+- processData
+- transform
+- useUserData
 ```
 
-**Extract a standalone function:**
-```
-Show me the calculateTotal function from test-examples/sample.ts
+### 2. `extract_typescript_method`
+
+Extracts a method or function along with its relevant imports and class properties.
+
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `filePath` | string | Yes | Path to the TypeScript file |
+| `methodName` | string | Yes | Name of the method/function to extract |
+
+**Example Request:**
+
+```bash
+curl -X POST http://localhost:4001/mcp \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "tools/call",
+    "params": {
+      "name": "extract_typescript_method",
+      "arguments": {
+        "filePath": "test-examples/sample.ts",
+        "methodName": "fetchUser"
+      }
+    }
+  }'
 ```
 
-**Extract an arrow function:**
-```
-Extract the formatDate function and its imports from test-examples/sample.ts
-```
-
-**Extract a complex hook:**
-```
-I want to see the useUserData hook from test-examples/sample.ts
-```
-
-## What the Tool Returns
-
-The tool returns a formatted output like this:
+**Example Response:**
 
 ```
 === IMPORTS ===
-import axios from 'axios';
+(No imports used by this method)
+
+=== PROPERTIES/CONSTANTS ===
+private apiUrl: string;
 
 === METHOD: fetchUser ===
 async fetchUser(userId: number): Promise<User> {
@@ -78,10 +145,26 @@ async fetchUser(userId: number): Promise<User> {
 }
 ```
 
-Notice that:
-- Only the `axios` import is shown (not `react`, `date-fns`, or `lodash`)
-- This is because `fetchUser` only uses `axios`
-- The method body is shown exactly as it appears in the source file
+## What the Tool Returns
+
+The extraction tool returns three sections:
+
+### 1. IMPORTS
+
+Only project-relative imports that are actually used by the method:
+- Imports starting with `./`, `../`, or `src/`
+- External dependencies (like `axios`, `react`) are filtered out
+
+### 2. PROPERTIES/CONSTANTS
+
+For class methods, this includes:
+- Instance properties from the method's class that are referenced
+- Static properties (constants) from the method's class
+- Properties from other classes instantiated in the method
+
+### 3. METHOD
+
+The complete method body as it appears in the source file.
 
 ## Supported Method Types
 
@@ -132,59 +215,182 @@ The tool can extract:
 
 ## Common Use Cases
 
-### Learning a Codebase
+### Exploring a File
+
+First, list all methods to understand what's available:
+
+```bash
+curl -X POST http://localhost:4001/mcp \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "tools/call",
+    "params": {
+      "name": "list_typescript_methods",
+      "arguments": {"filePath": "src/auth/login.ts"}
+    }
+  }'
 ```
-I'm new to this codebase. Can you extract the authentication logic from src/auth/login.ts?
+
+Then extract the specific method you're interested in.
+
+### Learning a Codebase
+
+Extract the authentication logic:
+
+```bash
+curl -X POST http://localhost:4001/mcp \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "tools/call",
+    "params": {
+      "name": "extract_typescript_method",
+      "arguments": {
+        "filePath": "src/auth/login.ts",
+        "methodName": "authenticateUser"
+      }
+    }
+  }'
 ```
 
 ### Code Review
-```
-Extract the handlePayment method from src/payments/processor.ts so I can review it
+
+Extract the payment handling method:
+
+```bash
+curl -X POST http://localhost:4001/mcp \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "tools/call",
+    "params": {
+      "name": "extract_typescript_method",
+      "arguments": {
+        "filePath": "src/payments/processor.ts",
+        "methodName": "handlePayment"
+      }
+    }
+  }'
 ```
 
 ### Understanding Dependencies
-```
-What imports does the validateForm function use? Extract it from src/utils/validation.ts
+
+Extract to see what imports and properties a method uses:
+
+```bash
+curl -X POST http://localhost:4001/mcp \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "tools/call",
+    "params": {
+      "name": "extract_typescript_method",
+      "arguments": {
+        "filePath": "src/utils/validation.ts",
+        "methodName": "validateForm"
+      }
+    }
+  }'
 ```
 
 ### Preparing for Refactoring
+
+Extract to understand dependencies before moving code:
+
+```bash
+curl -X POST http://localhost:4001/mcp \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "tools/call",
+    "params": {
+      "name": "extract_typescript_method",
+      "arguments": {
+        "filePath": "src/api/users.ts",
+        "methodName": "parseUserData"
+      }
+    }
+  }'
 ```
-I want to move the parseUserData function to a different file. Show me the function and its dependencies from src/api/users.ts
-```
-
-## Troubleshooting
-
-### Method Not Found
-If you get an error like "Method 'xyz' not found", check:
-- The method name is spelled correctly (case-sensitive)
-- The method exists in the specified file
-- You're looking for the right type (class method vs standalone function)
-
-### File Not Found
-If you get an error about the file not being found:
-- Use an absolute path, or
-- Make sure you're in the correct working directory when running Claude Code
-- Relative paths are resolved from the current working directory
-
-### No Imports Returned
-If the tool returns "(No imports used by this method)":
-- The method might not use any external imports
-- It might only use built-in JavaScript/TypeScript features
-- This is normal for simple utility functions
 
 ## Example Session
 
-Here's a complete example of using the tool:
+Here's a complete example:
 
-**User:**
-```
-I'm working in the test-examples directory. Can you extract the useUserData hook from sample.ts?
+**Step 1: Start the server**
+```bash
+npm start
 ```
 
-**Claude Code (using the tool):**
+**Step 2: Register a client**
+```bash
+curl -X POST http://localhost:4001/register \
+  -H "Content-Type: application/json" \
+  -d '{"clientId": "my-app"}'
+```
+
+Response:
+```json
+{
+  "token": "550e8400-e29b-41d4-a716-446655440000",
+  "clientId": "my-app",
+  "message": "Registration successful"
+}
+```
+
+**Step 3: List methods in the file**
+```bash
+curl -X POST http://localhost:4001/mcp \
+  -H "Authorization: Bearer 550e8400-e29b-41d4-a716-446655440000" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "tools/call",
+    "params": {
+      "name": "list_typescript_methods",
+      "arguments": {"filePath": "test-examples/sample.ts"}
+    }
+  }'
+```
+
+**Step 4: Extract the useUserData hook**
+```bash
+curl -X POST http://localhost:4001/mcp \
+  -H "Authorization: Bearer 550e8400-e29b-41d4-a716-446655440000" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 2,
+    "method": "tools/call",
+    "params": {
+      "name": "extract_typescript_method",
+      "arguments": {
+        "filePath": "test-examples/sample.ts",
+        "methodName": "useUserData"
+      }
+    }
+  }'
+```
+
+Response:
 ```
 === IMPORTS ===
-import { useState, useEffect } from 'react';
+(No imports used by this method)
+
+=== PROPERTIES/CONSTANTS ===
+private apiUrl: string;
 
 === METHOD: useUserData ===
 export const useUserData = (userId: number) => {
@@ -211,7 +417,10 @@ export const useUserData = (userId: number) => {
 };
 ```
 
-Notice how it correctly identified that `useUserData` uses `useState` and `useEffect` from React, even though the file imports many other things like `axios`, `date-fns`, and `lodash`.
+Notice that:
+- No imports are shown (React hooks are external dependencies)
+- The `apiUrl` property from `UserService` is extracted because it's referenced
+- The complete method body is shown
 
 ## Advanced Usage
 
@@ -219,35 +428,87 @@ Notice how it correctly identified that `useUserData` uses `useState` and `useEf
 
 You can use absolute or relative paths:
 
-```
-Extract myFunction from /absolute/path/to/file.ts
-Extract myFunction from ./relative/path/to/file.ts
-Extract myFunction from src/utils/helpers.ts
+```bash
+# Absolute path
+{"filePath": "/absolute/path/to/file.ts"}
+
+# Relative to server's working directory
+{"filePath": "./relative/path/to/file.ts"}
+{"filePath": "src/utils/helpers.ts"}
 ```
 
-### Combining with Other Tools
+### Custom Port
 
-You can ask Claude Code to extract a method and then do something with it:
+Start the server on a custom port:
 
-```
-Extract the calculateDiscount function from src/pricing.ts and then write tests for it
+```bash
+PORT=3000 npm start
 ```
 
+Then use `http://localhost:3000` for all requests.
+
+### Token Persistence
+
+Tokens are stored in `.mcp-tokens.json`. The server loads these on startup, so registered clients remain valid after server restarts.
+
+To view registered tokens:
+
+```bash
+cat .mcp-tokens.json
 ```
-Extract the authentication middleware from src/middleware/auth.ts and explain how it works
-```
+
+## Troubleshooting
+
+### Authentication Errors
+
+If you get a 401 or 403 error:
+- Ensure you're including the `Authorization: Bearer <token>` header
+- Verify the token is valid (check `.mcp-tokens.json`)
+- Re-register if needed to get a new token
+
+### Method Not Found
+
+If you get "Method 'xyz' not found", check:
+- The method name is spelled correctly (case-sensitive)
+- The method exists in the specified file
+- You're looking for the right type (class method vs standalone function)
+- Try listing all methods first with `list_typescript_methods`
+
+### File Not Found
+
+If you get an error about the file not being found:
+- Use an absolute path, or
+- Ensure the path is relative to the server's working directory
+- Verify the file exists: `ls -la <path>`
+
+### No Imports Returned
+
+If the tool returns "(No imports used by this method)":
+- The method might not use any project-relative imports
+- It might only use external dependencies (which are filtered out)
+- It might only use built-in JavaScript/TypeScript features
+- This is normal for many methods
+
+### Server Not Running
+
+If you can't connect to the server:
+- Check if the server is running: `ps aux | grep node`
+- Verify the port isn't in use: `lsof -i :4001`
+- Check server logs for errors
 
 ## Tips
 
-1. **Be specific with method names**: Use the exact name as it appears in the code
-2. **Provide context**: Mention the file path to help Claude Code locate the method
-3. **Use for learning**: This tool is great for understanding unfamiliar code
-4. **Check dependencies**: Use it to see what a method depends on before refactoring
+1. **List before extracting**: Use `list_typescript_methods` to see what's available
+2. **Be specific with method names**: Use the exact name as it appears in the code
+3. **Provide correct paths**: Paths are relative to the server's working directory
+4. **Use for learning**: This tool is great for understanding unfamiliar code
+5. **Check dependencies**: Use it to see what a method depends on before refactoring
 
 ## Need Help?
 
 If you encounter issues:
-1. Check that the MCP server is configured correctly in your Claude Code settings
+1. Check that the server is running (`npm start`)
 2. Verify the build completed successfully (`npm run build`)
 3. Ensure the TypeScript file you're querying is valid and parseable
-4. Try using an absolute path to the file if relative paths aren't working
+4. Try using an absolute path to the file
+5. Check the server logs for error messages

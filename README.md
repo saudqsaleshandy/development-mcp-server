@@ -1,13 +1,25 @@
 # TypeScript Extractor MCP Server
 
-An MCP (Model Context Protocol) server for extracting TypeScript imports and method bodies. This tool integrates with Claude Code and allows you to extract specific methods/functions along with their relevant imports from TypeScript files.
+An MCP (Model Context Protocol) server for extracting TypeScript imports and method bodies. This tool runs as an HTTP server with authentication and provides tools to extract specific methods/functions along with their relevant imports and class properties from TypeScript files.
 
 ## Features
 
-- **Comprehensive Method Detection**: Extracts class methods (instance & static), standalone functions, arrow functions, and interface/type method signatures
-- **Smart Import Filtering**: Returns only imports that are actually used by the specified method
-- **Plain Text Output**: Returns readable code with clear separation between imports and method body
-- **Error Handling**: Provides clear error messages when methods are not found
+- **HTTP-based MCP Server**: Uses Streamable HTTP transport for stateful communication
+- **Authentication**: Bearer token authentication with client registration
+- **List Methods Tool**: Discover all methods/functions in a TypeScript file
+- **Extract Method Tool**: Extract methods with their dependencies
+- **Smart Import Filtering**: Returns only project-relative imports that are actually used
+- **Class Property Extraction**: Extracts properties from the method's class and referenced classes
+- **Comprehensive Method Detection**: Handles class methods (instance & static), standalone functions, arrow functions, and interface/type method signatures
+- **Plain Text Output**: Returns readable code with clear separation between imports, properties, and method body
+
+## Architecture
+
+This is an HTTP-based MCP server that:
+- Runs on a configurable port (default: 4001)
+- Requires client registration for authentication
+- Uses Bearer tokens for API security
+- Persists tokens to `.mcp-tokens.json`
 
 ## Installation
 
@@ -16,62 +28,146 @@ npm install
 npm run build
 ```
 
-## Configuration
+## Running the Server
 
-Add this server to your Claude Code MCP settings file:
+```bash
+npm start
+```
 
-**For macOS/Linux**: `~/.config/claude/claude_desktop_config.json`
-**For Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
+The server will start on port 4001. You can customize the port:
 
-```json
-{
-  "mcpServers": {
-    "typescript-extractor": {
-      "command": "node",
-      "args": ["/absolute/path/to/typescript-extractor-mcp/build/index.js"]
+```bash
+PORT=3000 npm start
+```
+
+## Quick Start
+
+### 1. Start the Server
+
+```bash
+npm start
+```
+
+### 2. Register a Client
+
+```bash
+curl -X POST http://localhost:4001/register \
+  -H "Content-Type: application/json" \
+  -d '{"clientId": "my-client"}'
+```
+
+Save the returned token.
+
+### 3. List Methods in a File
+
+```bash
+curl -X POST http://localhost:4001/mcp \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "tools/call",
+    "params": {
+      "name": "list_typescript_methods",
+      "arguments": {"filePath": "test-examples/sample.ts"}
     }
-  }
-}
+  }'
 ```
 
-Replace `/absolute/path/to/typescript-extractor-mcp` with the actual path to this directory.
+### 4. Extract a Method
 
-## Usage
-
-Once configured, the tool becomes available in Claude Code as `extract_typescript_method`.
-
-### Example Usage in Claude Code
-
+```bash
+curl -X POST http://localhost:4001/mcp \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 2,
+    "method": "tools/call",
+    "params": {
+      "name": "extract_typescript_method",
+      "arguments": {
+        "filePath": "test-examples/sample.ts",
+        "methodName": "fetchUser"
+      }
+    }
+  }'
 ```
-Can you extract the `handleSubmit` method from src/components/Form.tsx?
+
+## API Endpoints
+
+| Endpoint | Method | Auth | Description |
+|----------|--------|------|-------------|
+| `/register` | POST | No | Register client and obtain Bearer token |
+| `/mcp` | POST | Bearer | Call MCP tools |
+| `/mcp` | GET | Bearer | SSE streaming endpoint |
+
+## Available Tools
+
+### `list_typescript_methods`
+
+Lists all method and function names in a TypeScript file.
+
+**Parameters:**
+- `filePath` (string, required): Path to the TypeScript file
+
+**Example:**
+```bash
+curl -X POST http://localhost:4001/mcp \
+  -H "Authorization: Bearer TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "tools/call",
+    "params": {
+      "name": "list_typescript_methods",
+      "arguments": {"filePath": "src/app.ts"}
+    }
+  }'
 ```
 
-Claude Code will use the `extract_typescript_method` tool to:
-1. Parse the TypeScript file
-2. Find the `handleSubmit` method
-3. Identify which imports are used by that method
-4. Return both the relevant imports and the complete method body
+### `extract_typescript_method`
 
-### Parameters
+Extracts a method/function with its relevant imports and class properties.
 
-- **filePath** (string, required): Path to the TypeScript file (absolute or relative to current working directory)
-- **methodName** (string, required): Name of the method, function, or variable containing the function to extract
+**Parameters:**
+- `filePath` (string, required): Path to the TypeScript file
+- `methodName` (string, required): Name of the method/function to extract
 
-### Output Format
+**Example:**
+```bash
+curl -X POST http://localhost:4001/mcp \
+  -H "Authorization: Bearer TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "tools/call",
+    "params": {
+      "name": "extract_typescript_method",
+      "arguments": {
+        "filePath": "src/app.ts",
+        "methodName": "handleRequest"
+      }
+    }
+  }'
+```
 
+**Output Format:**
 ```
 === IMPORTS ===
-import { useState } from 'react';
-import { validateForm } from './utils';
+import { helper } from './utils';
 
-=== METHOD: handleSubmit ===
-const handleSubmit = async (e: FormEvent) => {
-  e.preventDefault();
-  const isValid = validateForm(formData);
-  if (isValid) {
-    // ... rest of method
-  }
-};
+=== PROPERTIES/CONSTANTS ===
+private config: Config;
+static MAX_RETRIES = 3;
+
+=== METHOD: handleRequest ===
+async handleRequest(req: Request): Promise<Response> {
+  // method body
+}
 ```
 
 ## Supported TypeScript Constructs
@@ -92,7 +188,19 @@ npm run watch
 
 # Build for production
 npm run build
+
+# Run tests
+npm test
 ```
+
+## How It Works
+
+1. **Parse**: Uses `ts-morph` to parse TypeScript files into an AST
+2. **Locate**: Finds the requested method across all supported constructs
+3. **Analyze**: Identifies all identifiers used in the method body
+4. **Filter Imports**: Returns only project-relative imports (`./`, `../`, `src/`) that are used
+5. **Extract Properties**: For class methods, extracts properties from the class and referenced classes
+6. **Format**: Returns structured output with imports, properties, and method body
 
 ## Use Cases
 
@@ -100,6 +208,36 @@ npm run build
 - **Code Review**: Extract methods with their dependencies for focused review
 - **Documentation**: Generate examples showing method implementations with required imports
 - **Refactoring**: See exact dependencies before moving code to different files
+- **Code Navigation**: List all methods in a file to understand its structure
+
+## Project Structure
+
+```
+context-tree/
+├── src/
+│   ├── index.ts           # MCP HTTP server
+│   └── extractor.ts       # TypeScript extraction logic
+├── test-examples/
+│   ├── sample.ts          # Example TypeScript file
+│   └── test-extractor.ts  # Test script
+├── build/                 # Compiled JavaScript
+├── package.json
+├── tsconfig.json
+└── .mcp-tokens.json       # Stored authentication tokens
+```
+
+## Dependencies
+
+- `@modelcontextprotocol/sdk`: MCP protocol implementation
+- `ts-morph`: TypeScript AST manipulation
+- `express`: Web server
+- `zod`: Schema validation
+
+## Documentation
+
+- `QUICKSTART.md` - Get up and running in minutes
+- `USAGE.md` - Detailed usage guide with examples
+- `PROJECT_SUMMARY.md` - Architecture and technical details
 
 ## License
 

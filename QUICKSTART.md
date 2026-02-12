@@ -1,12 +1,12 @@
 # Quick Start - TypeScript Extractor MCP Server
 
-Get up and running in 3 minutes.
+Get up and running in 5 minutes.
 
 ## Installation
 
 ```bash
 # 1. Navigate to project directory
-cd /Users/saud/.claude/tools/context-tree
+cd /Users/saud/Projects/ai-tools/mcp-servers/context-tree
 
 # 2. Install dependencies and build
 npm install
@@ -14,41 +14,93 @@ npm install
 
 The build happens automatically during install.
 
-## Configuration
+## Start the Server
 
-**Step 1:** Open your Claude Code MCP config file:
+```bash
+npm start
+```
 
-- **macOS/Linux**: `~/.config/claude/claude_desktop_config.json`
-- **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
+You should see:
+```
+TypeScript Extractor MCP Server running on http://localhost:4001
+Registration endpoint: POST http://localhost:4001/register
+MCP endpoint: http://localhost:4001/mcp
+Tokens stored in: /Users/saud/Projects/ai-tools/mcp-servers/context-tree/.mcp-tokens.json
+```
 
-**Step 2:** Add this configuration:
+## Register a Client
 
+Before using the MCP tools, you need to register and obtain an authentication token:
+
+```bash
+curl -X POST http://localhost:4001/register \
+  -H "Content-Type: application/json" \
+  -d '{"clientId": "my-client"}'
+```
+
+Response:
 ```json
 {
-  "mcpServers": {
-    "typescript-extractor": {
-      "command": "node",
-      "args": ["/Users/saud/.claude/tools/context-tree/build/index.js"]
-    }
-  }
+  "token": "550e8400-e29b-41d4-a716-446655440000",
+  "clientId": "my-client",
+  "message": "Registration successful",
+  "usage": "Include this token in Authorization header as \"Bearer <token>\""
 }
 ```
 
-**Step 3:** Restart Claude Code
+Save the token - you'll need it for all MCP requests.
 
 ## Test It
 
-Try this in Claude Code:
+### List Methods in a File
 
+```bash
+curl -X POST http://localhost:4001/mcp \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "tools/call",
+    "params": {
+      "name": "list_typescript_methods",
+      "arguments": {
+        "filePath": "test-examples/sample.ts"
+      }
+    }
+  }'
 ```
-Extract the fetchUser method from /Users/saud/.claude/tools/context-tree/test-examples/sample.ts
+
+You should see a list of all methods/functions in the file.
+
+### Extract a Method
+
+```bash
+curl -X POST http://localhost:4001/mcp \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 2,
+    "method": "tools/call",
+    "params": {
+      "name": "extract_typescript_method",
+      "arguments": {
+        "filePath": "test-examples/sample.ts",
+        "methodName": "fetchUser"
+      }
+    }
+  }'
 ```
 
 You should see:
 
 ```
 === IMPORTS ===
-import axios from 'axios';
+(No imports used by this method)
+
+=== PROPERTIES/CONSTANTS ===
+private apiUrl: string;
 
 === METHOD: fetchUser ===
 async fetchUser(userId: number): Promise<User> {
@@ -60,15 +112,49 @@ async fetchUser(userId: number): Promise<User> {
 ## Common Commands
 
 ```bash
+# Start the server
+npm start
+
+# Start with custom port
+PORT=3000 npm start
+
 # Rebuild after making changes
 npm run build
 
 # Watch mode for development
 npm run watch
 
+# Run tests
+npm test
+
 # View project structure
 ls -la
 ```
+
+## Server Endpoints
+
+| Endpoint | Method | Auth Required | Description |
+|----------|--------|---------------|-------------|
+| `/register` | POST | No | Register client and get token |
+| `/mcp` | POST | Yes | Call MCP tools |
+| `/mcp` | GET | Yes | SSE streaming endpoint |
+
+## Available Tools
+
+### `list_typescript_methods`
+
+Lists all methods and functions in a TypeScript file.
+
+**Parameters:**
+- `filePath`: Path to the TypeScript file
+
+### `extract_typescript_method`
+
+Extracts a method with its imports and properties.
+
+**Parameters:**
+- `filePath`: Path to the TypeScript file
+- `methodName`: Name of the method to extract
 
 ## That's It!
 
@@ -79,19 +165,80 @@ You're ready to use the TypeScript Extractor. See:
 
 ## Quick Examples
 
-**Extract a class method:**
+**List all methods in a file:**
+```bash
+curl -X POST http://localhost:4001/mcp \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "tools/call",
+    "params": {
+      "name": "list_typescript_methods",
+      "arguments": {"filePath": "test-examples/sample.ts"}
+    }
+  }'
 ```
-Extract the formatUserName method from test-examples/sample.ts
+
+**Extract a class method:**
+```bash
+curl -X POST http://localhost:4001/mcp \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "tools/call",
+    "params": {
+      "name": "extract_typescript_method",
+      "arguments": {
+        "filePath": "test-examples/sample.ts",
+        "methodName": "formatUserName"
+      }
+    }
+  }'
 ```
 
 **Extract a hook:**
-```
-Show me the useUserData hook from test-examples/sample.ts
+```bash
+curl -X POST http://localhost:4001/mcp \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "tools/call",
+    "params": {
+      "name": "extract_typescript_method",
+      "arguments": {
+        "filePath": "test-examples/sample.ts",
+        "methodName": "useUserData"
+      }
+    }
+  }'
 ```
 
 **Extract a function:**
-```
-Extract calculateTotal from test-examples/sample.ts
+```bash
+curl -X POST http://localhost:4001/mcp \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "tools/call",
+    "params": {
+      "name": "extract_typescript_method",
+      "arguments": {
+        "filePath": "test-examples/sample.ts",
+        "methodName": "calculateTotal"
+      }
+    }
+  }'
 ```
 
-Each extraction shows only the imports that the method actually uses!
+Each extraction shows:
+- Only project-relative imports that the method uses
+- Class properties/constants referenced by the method
+- The complete method body
