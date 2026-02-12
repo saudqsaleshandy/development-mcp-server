@@ -31,11 +31,11 @@ context-tree/
 ### 1. MCP HTTP Server (`src/index.ts`)
 
 The entry point that:
-- Creates an MCP server using `@modelcontextprotocol/sdk`
-- Sets up Streamable HTTP transport for stateful communication
-- Registers two tools: `list_typescript_methods` and `extract_typescript_method`
-- Implements Bearer token authentication via `/register` endpoint
-- Stores client tokens in `.mcp-tokens.json`
+ - Creates an MCP server using `@modelcontextprotocol/sdk`
+ - Sets up Streamable HTTP transport for stateful communication
+ - Registers three tools: `list_typescript_methods`, `extract_typescript_method`, and `read_file`
+ - Implements Bearer token authentication via `/register` endpoint
+ - Stores client tokens in `.mcp-tokens.json`
 
 **Key Components:**
 - `McpServer`: MCP server instance with tool capabilities
@@ -203,13 +203,23 @@ Lists all method and function names in a TypeScript file.
 Extracts imports, properties, and method body from a TypeScript file.
 
 **Parameters:**
-- `filePath`: Path to the TypeScript file
-- `methodName`: Name of the method/function to extract
+ - `filePath`: Path to the TypeScript file
+ - `methodName`: Name of the method/function to extract
 
 **Returns:**
-- Relevant imports (project-relative only)
-- Class properties/constants used by the method
-- Complete method body
+ - Relevant imports (project-relative only)
+ - Class properties/constants used by the method
+ - Complete method body
+
+### 3. `read_file`
+
+Reads and returns the entire contents of a file.
+
+**Parameters:**
+ - `filePath`: Path to the file
+
+**Returns:**
+ - File contents as text, or error message if file not found
 
 ## Use Cases
 

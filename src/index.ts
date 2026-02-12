@@ -137,6 +137,41 @@ mcpServer.registerTool(
   }
 );
 
+// Register the read file tool
+mcpServer.registerTool(
+  'read_file',
+  {
+    description: 'Read and return the entire contents of a file.',
+    inputSchema: z.object({
+      filePath: z.string().describe('Path to the file (absolute or relative to current working directory)'),
+    }),
+  },
+  async (args) => {
+    const { filePath } = args;
+
+    try {
+      const content = readFileSync(filePath, 'utf-8');
+      return {
+        content: [
+          {
+            type: 'text',
+            text: content,
+          },
+        ],
+      };
+    } catch (error) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `Error: Failed to read file - ${(error as Error).message}`,
+          },
+        ],
+      };
+    }
+  }
+);
+
 function formatOutput(imports: string, properties: string, methodBody: string, methodName: string): string {
   const parts: string[] = [];
 

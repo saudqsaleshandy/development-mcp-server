@@ -8,6 +8,7 @@ An MCP (Model Context Protocol) server for extracting TypeScript imports and met
 - **Authentication**: Bearer token authentication with client registration
 - **List Methods Tool**: Discover all methods/functions in a TypeScript file
 - **Extract Method Tool**: Extract methods with their dependencies
+- **Read File Tool**: Read entire file contents
 - **Smart Import Filtering**: Returns only project-relative imports that are actually used
 - **Class Property Extraction**: Extracts properties from the method's class and referenced classes
 - **Comprehensive Method Detection**: Handles class methods (instance & static), standalone functions, arrow functions, and interface/type method signatures
@@ -154,6 +155,106 @@ curl -X POST http://localhost:4001/mcp \
     }
   }'
 ```
+
+**Output Format:**
+```
+=== IMPORTS ===
+import { helper } from './utils';
+
+=== PROPERTIES/CONSTANTS ===
+private config: Config;
+static MAX_RETRIES = 3;
+
+=== METHOD: handleRequest ===
+async handleRequest(req: Request): Promise<Response> {
+  // method body
+}
+```
+
+### `read_file`
+
+Reads and returns the entire contents of a file.
+
+**Parameters:**
+- `filePath` (string, required): Path to the file
+
+**Example:**
+```bash
+curl -X POST http://localhost:4001/mcp \
+  -H "Authorization: Bearer TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "tools/call",
+    "params": {
+      "name": "read_file",
+      "arguments": {"filePath": "src/app.ts"}
+    }
+  }'
+```
+
+### `extract_typescript_method`
+
+Extracts a method/function with its relevant imports and class properties.
+
+**Parameters:**
+ - `filePath` (string, required): Path to the TypeScript file
+ - `methodName` (string, required): Name of the method/function to extract
+
+### `read_file`
+
+Reads and returns the entire contents of a file.
+
+**Parameters:**
+ - `filePath` (string, required): Path to the file
+
+**Example:**
+```bash
+curl -X POST http://localhost:4001/mcp \
+  -H "Authorization: Bearer TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "tools/call",
+    "params": {
+      "name": "read_file",
+      "arguments": {"filePath": "src/app.ts"}
+    }
+   }'
+   ```
+   
+   **Example:**
+   ```bash
+   curl -X POST http://localhost:4001/mcp \
+     -H "Authorization: Bearer TOKEN" \
+     -H "Content-Type: application/json" \
+     -d '{
+       "jsonrpc": "2.0",
+       "id": 1,
+       "method": "tools/call",
+       "params": {
+         "name": "read_file",
+         "arguments": {"filePath": "src/app.ts"}
+       }
+     }
+   ```
+   
+   **Output Format:**
+   ```
+   === IMPORTS ===
+   import { helper } from './utils';
+   
+   === PROPERTIES/CONSTANTS ===
+   private config: Config;
+   static MAX_RETRIES = 3;
+   
+   === METHOD: handleRequest ===
+   async handleRequest(req: Request): Promise<Response> {
+     // method body
+   }
+   ```
 
 **Output Format:**
 ```
