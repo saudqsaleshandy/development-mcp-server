@@ -158,14 +158,18 @@ curl -X POST http://localhost:4001/mcp \
 
 **Output Format:**
 ```
-=== IMPORTS ===
+Method Name: handleRequest
+File Path: src/app.ts
+Line Number: 45
+
+Imports:
 import { helper } from './utils';
 
-=== PROPERTIES/CONSTANTS ===
+Properties/Constants:
 private config: Config;
 static MAX_RETRIES = 3;
 
-=== METHOD: handleRequest ===
+Method Body:
 async handleRequest(req: Request): Promise<Response> {
   // method body
 }
@@ -194,81 +198,9 @@ curl -X POST http://localhost:4001/mcp \
   }'
 ```
 
-### `extract_typescript_method`
-
-Extracts a method/function with its relevant imports and class properties.
-
-**Parameters:**
- - `filePath` (string, required): Path to the TypeScript file
- - `methodName` (string, required): Name of the method/function to extract
-
-### `read_file`
-
-Reads and returns the entire contents of a file.
-
-**Parameters:**
- - `filePath` (string, required): Path to the file
-
-**Example:**
-```bash
-curl -X POST http://localhost:4001/mcp \
-  -H "Authorization: Bearer TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "jsonrpc": "2.0",
-    "id": 1,
-    "method": "tools/call",
-    "params": {
-      "name": "read_file",
-      "arguments": {"filePath": "src/app.ts"}
-    }
-   }'
-   ```
-   
-   **Example:**
-   ```bash
-   curl -X POST http://localhost:4001/mcp \
-     -H "Authorization: Bearer TOKEN" \
-     -H "Content-Type: application/json" \
-     -d '{
-       "jsonrpc": "2.0",
-       "id": 1,
-       "method": "tools/call",
-       "params": {
-         "name": "read_file",
-         "arguments": {"filePath": "src/app.ts"}
-       }
-     }
-   ```
-   
-   **Output Format:**
-   ```
-   === IMPORTS ===
-   import { helper } from './utils';
-   
-   === PROPERTIES/CONSTANTS ===
-   private config: Config;
-   static MAX_RETRIES = 3;
-   
-   === METHOD: handleRequest ===
-   async handleRequest(req: Request): Promise<Response> {
-     // method body
-   }
-   ```
-
 **Output Format:**
 ```
-=== IMPORTS ===
-import { helper } from './utils';
-
-=== PROPERTIES/CONSTANTS ===
-private config: Config;
-static MAX_RETRIES = 3;
-
-=== METHOD: handleRequest ===
-async handleRequest(req: Request): Promise<Response> {
-  // method body
-}
+[Full file contents]
 ```
 
 ## Supported TypeScript Constructs

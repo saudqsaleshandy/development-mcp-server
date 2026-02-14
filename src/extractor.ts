@@ -6,6 +6,7 @@ export interface ExtractionResult {
   imports?: string;
   properties?: string;
   methodBody?: string;
+  lineNumber?: number;
   error?: string;
 }
 
@@ -118,6 +119,9 @@ export class TypeScriptExtractor {
       // Extract method body
       const methodBody = this.getMethodBody(method);
 
+      // Get line number of the method
+      const lineNumber = method.getStartLineNumber();
+
       // Get used identifiers in the method
       const usedIdentifiers = this.getUsedIdentifiers(method);
 
@@ -132,6 +136,7 @@ export class TypeScriptExtractor {
         imports,
         properties,
         methodBody,
+        lineNumber,
       };
     } catch (error) {
       return {

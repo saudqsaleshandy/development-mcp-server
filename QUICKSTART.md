@@ -96,13 +96,17 @@ curl -X POST http://localhost:4001/mcp \
 You should see:
 
 ```
-=== IMPORTS ===
+Method Name: fetchUser
+File Path: test-examples/sample.ts
+Line Number: 42
+
+Imports:
 (No imports used by this method)
 
-=== PROPERTIES/CONSTANTS ===
+Properties/Constants:
 private apiUrl: string;
 
-=== METHOD: fetchUser ===
+Method Body:
 async fetchUser(userId: number): Promise<User> {
   const response = await axios.get(`${this.apiUrl}/users/${userId}`);
   return response.data;
@@ -239,6 +243,7 @@ curl -X POST http://localhost:4001/mcp \
 ```
 
 Each extraction shows:
+- Method Name, File Path, and Line Number
 - Only project-relative imports that the method uses
 - Class properties/constants referenced by the method
 - The complete method body

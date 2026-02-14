@@ -124,7 +124,7 @@ mcpServer.registerTool(
       };
     }
 
-    const output = formatOutput(result.imports || '', result.properties || '', result.methodBody || '', methodName);
+    const output = formatOutput(result.imports || '', result.properties || '', result.methodBody || '', methodName, filePath, result.lineNumber || 0);
 
     return {
       content: [
@@ -172,31 +172,38 @@ mcpServer.registerTool(
   }
 );
 
-function formatOutput(imports: string, properties: string, methodBody: string, methodName: string): string {
+function formatOutput(imports: string, properties: string, methodBody: string, methodName: string, filePath: string, lineNumber: number): string {
   const parts: string[] = [];
 
+  // YAML header
+  parts.push(`Method Name: ${methodName}`);
+  parts.push(`File Path: ${filePath}`);
+  parts.push(`Line Number: ${lineNumber}`);
+  parts.push('');
+
+  // Imports section
+  parts.push('Imports:');
   if (imports) {
-    parts.push('=== IMPORTS ===\n');
     parts.push(imports);
-    parts.push('\n');
   } else {
-    parts.push('=== IMPORTS ===\n');
-    parts.push('(No imports used by this method)\n');
+    parts.push('(No imports used by this method)');
   }
+  parts.push('');
 
+  // Properties/Constants section
+  parts.push('Properties/Constants:');
   if (properties) {
-    parts.push('\n=== PROPERTIES/CONSTANTS ===\n');
     parts.push(properties);
-    parts.push('\n');
   } else {
-    parts.push('\n=== PROPERTIES/CONSTANTS ===\n');
-    parts.push('(No class properties or constants used)\n');
+    parts.push('(No class properties or constants used)');
   }
+  parts.push('');
 
-  parts.push('\n=== METHOD: ' + methodName + ' ===\n');
+  // Method Body section
+  parts.push('Method Body:');
   parts.push(methodBody);
 
-  return parts.join('');
+  return parts.join('\n');
 }
 
 // Authentication middleware

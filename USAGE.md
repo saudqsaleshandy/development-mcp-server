@@ -132,13 +132,17 @@ curl -X POST http://localhost:4001/mcp \
 **Example Response:**
 
 ```
-=== IMPORTS ===
+Method Name: fetchUser
+File Path: test-examples/sample.ts
+Line Number: 42
+
+Imports:
 (No imports used by this method)
 
-=== PROPERTIES/CONSTANTS ===
+Properties/Constants:
 private apiUrl: string;
 
-=== METHOD: fetchUser ===
+Method Body:
 async fetchUser(userId: number): Promise<User> {
   const response = await axios.get(`${this.apiUrl}/users/${userId}`);
   return response.data;
@@ -147,22 +151,27 @@ async fetchUser(userId: number): Promise<User> {
 
 ## What the Tool Returns
 
-The extraction tool returns three sections:
+The extraction tool returns a YAML-style formatted output with the following sections:
 
-### 1. IMPORTS
+### Header Information
+- **Method Name**: The name of the extracted method/function
+- **File Path**: The path to the source file
+- **Line Number**: The line number where the method is defined
+
+### 1. Imports
 
 Only project-relative imports that are actually used by the method:
 - Imports starting with `./`, `../`, or `src/`
 - External dependencies (like `axios`, `react`) are filtered out
 
-### 2. PROPERTIES/CONSTANTS
+### 2. Properties/Constants
 
 For class methods, this includes:
 - Instance properties from the method's class that are referenced
 - Static properties (constants) from the method's class
 - Properties from other classes instantiated in the method
 
-### 3. METHOD
+### 3. Method Body
 
 The complete method body as it appears in the source file.
 
@@ -386,13 +395,17 @@ curl -X POST http://localhost:4001/mcp \
 
 Response:
 ```
-=== IMPORTS ===
+Method Name: useUserData
+File Path: test-examples/sample.ts
+Line Number: 95
+
+Imports:
 (No imports used by this method)
 
-=== PROPERTIES/CONSTANTS ===
+Properties/Constants:
 private apiUrl: string;
 
-=== METHOD: useUserData ===
+Method Body:
 export const useUserData = (userId: number) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);

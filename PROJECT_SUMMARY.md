@@ -156,13 +156,17 @@ TypeScriptExtractor processes:
   6. Return: properties + method body
   ↓
 MCP Server formats:
-  === IMPORTS ===
+  Method Name: fetchUser
+  File Path: test-examples/sample.ts
+  Line Number: 42
+
+  Imports:
   (No imports used by this method)
 
-  === PROPERTIES/CONSTANTS ===
+  Properties/Constants:
   private apiUrl: string;
 
-  === METHOD: fetchUser ===
+  Method Body:
   async fetchUser(userId: number): Promise<User> { ... }
   ↓
 Client receives result
